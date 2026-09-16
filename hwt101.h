@@ -4,16 +4,16 @@
 
 #include "stm32f4xx_hal.h"
 
-#define HWT101_RX_BUFFER_SIZE 12 //接收缓冲区大小，预留多一字节
+#define HWT101_RX_BUFFER_SIZE 22 //HWT101连续发送0x52和0x53两个11字节帧
 
 typedef struct
 {
     UART_HandleTypeDef *hwt101_uart; //通信串口的指针
     uint8_t rx_buf[HWT101_RX_BUFFER_SIZE];
-    float yaw_data; //偏航角数据
-    float gyro_data; //角速度数据
-    uint8_t have_yaw_data; //数据是否有效
-    uint8_t have_gyro_data;
+    volatile float yaw_data; //偏航角数据
+    volatile float gyro_data; //角速度数据
+    volatile uint8_t have_yaw_data; //数据是否有效
+    volatile uint8_t have_gyro_data;
 }hwt101_csx;
 
 void hwt101_Init(hwt101_csx *csx,UART_HandleTypeDef *uart);

@@ -21,6 +21,7 @@ void hwt101_Init(hwt101_csx *csx,UART_HandleTypeDef *uart)
     csx->hwt101_uart=uart;
     csx->have_gyro_data=0;
     csx->have_yaw_data=0;
+    
     HAL_UARTEx_ReceiveToIdle_DMA(uart, csx->rx_buf, HWT101_RX_BUFFER_SIZE);
 }
 
@@ -32,18 +33,25 @@ void hwt101_Init(hwt101_csx *csx,UART_HandleTypeDef *uart)
  */
 void hwt101_Feed(hwt101_csx *csx,uint16_t Size)
 {
-    //重启dma，并且根据标志位保存数据
-    if(Size == 11 && csx->rx_buf[0]==HWT101_DATA_HEAD)
+    //一次DMA可能收到0x52和0x53两个连续帧，逐个解析
+    for(uint16_t offset=0; offset+11<=Size; offset+=11)
     {
-        if(csx->rx_buf[1]==HWT101_GYRO_DATA_TYPE) //如果数据包是角速度
+        uint8_t *frame=&csx->rx_buf[offset];
+
+        if(frame[0]!=HWT101_DATA_HEAD)
         {
-            int16_t raw = (int16_t)((csx->rx_buf[7] << 8) | csx->rx_buf[6]);
+            continue;
+        }
+
+        if(frame[1]==HWT101_GYRO_DATA_TYPE) //如果数据包是角速度
+        {
+            uint16_t raw = ((frame[7] << 8) | frame[6]);
             csx->gyro_data = raw / 32768.0 * 2000.0;
             csx->have_gyro_data=1; //已经有角速度数据了
         }
-        else if(csx->rx_buf[1]==HWT101_YAW_DATA_TYPE) //如果数据包是偏航角
+        else if(frame[1]==HWT101_YAW_DATA_TYPE) //如果数据包是偏航角
         {
-            int16_t raw = (int16_t)((csx->rx_buf[7] << 8) | csx->rx_buf[6]);
+            uint16_t raw = ((frame[7] << 8) | frame[6]);
             csx->yaw_data = raw / 32768.0 * 180.0;
             csx->have_yaw_data=1; //已经有偏航角数据了
         }
