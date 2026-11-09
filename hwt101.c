@@ -16,7 +16,7 @@ uint8_t cmd_save[]={0xFF,0xAA,0x00,0x00,0x00}; //保存寄存器命令
  * @param csx 句柄
  * @param uart 与hwt101连接的串口
  */
-void hwt101_Init(hwt101_csx *csx,UART_HandleTypeDef *uart)
+void hwt101_Init(hwt101_HandleTypeDef *csx,UART_HandleTypeDef *uart)
 {
     csx->hwt101_uart=uart;
     csx->have_gyro_data=0;
@@ -31,7 +31,7 @@ void hwt101_Init(hwt101_csx *csx,UART_HandleTypeDef *uart)
  * @param csx hwt101句柄
  * @param Size DMA传进来的字节数
  */
-void hwt101_Feed(hwt101_csx *csx,uint16_t Size)
+void hwt101_Feed(hwt101_HandleTypeDef *csx,uint16_t Size)
 {
     //一次DMA可能收到0x52和0x53两个连续帧，逐个解析
     for(uint16_t offset=0; offset+11<=Size; offset+=11)
@@ -51,7 +51,7 @@ void hwt101_Feed(hwt101_csx *csx,uint16_t Size)
         }
         else if(frame[1]==HWT101_YAW_DATA_TYPE) //如果数据包是偏航角
         {
-            uint16_t raw = ((frame[7] << 8) | frame[6]);
+            uint16_t raw = (int16_t)((frame[7] << 8) | frame[6]);
             csx->yaw_data = raw / 32768.0 * 180.0;
             csx->have_yaw_data=1; //已经有偏航角数据了
         }
@@ -66,7 +66,7 @@ void hwt101_Feed(hwt101_csx *csx,uint16_t Size)
  * @param data 接收数据的变量
  * @return uint8_t 读取是否成功，成功返回0，失败返回1
  */
-uint8_t hwt101_read_gyro(hwt101_csx *csx,float *data)
+uint8_t hwt101_read_gyro(hwt101_HandleTypeDef *csx,float *data)
 {
     if(csx->have_gyro_data == 1)
     {
@@ -83,7 +83,7 @@ uint8_t hwt101_read_gyro(hwt101_csx *csx,float *data)
  * @param data 接收数据的变量
  * @return uint8_t 读取是否成功，成功返回0，失败返回1
  */
-uint8_t hwt101_read_yaw(hwt101_csx *csx,float *data)
+uint8_t hwt101_read_yaw(hwt101_HandleTypeDef *csx,float *data)
 {
     if(csx->have_yaw_data == 1)
     {
@@ -99,7 +99,7 @@ uint8_t hwt101_read_yaw(hwt101_csx *csx,float *data)
  * @param csx 上下文
  * @param yaw 指定偏航角,单位°
  */
-void hwt101_set_yaw(hwt101_csx *csx,float yaw)
+void hwt101_set_yaw(hwt101_HandleTypeDef *csx,float yaw)
 {
     int16_t raw_yaw = (int16_t)((yaw * 32768.0f) / 180.0f);
 
@@ -117,7 +117,7 @@ void hwt101_set_yaw(hwt101_csx *csx,float yaw)
  * 
  * @param csx 上下文
  */
-void hwt101_reset_yaw(hwt101_csx *csx)
+void hwt101_reset_yaw(hwt101_HandleTypeDef *csx)
 {
     hwt101_set_yaw(csx,0);
 }
@@ -128,7 +128,7 @@ void hwt101_reset_yaw(hwt101_csx *csx)
  * @param csx 上下文
  * @param led_state 1是亮，0是灭
  */
-void hwt101_led(hwt101_csx *csx,uint8_t led_state)
+void hwt101_led(hwt101_HandleTypeDef *csx,uint8_t led_state)
 {
     uint8_t cmd[]={0xFF,0xAA,0x1B,~led_state,0x00};
     HAL_UART_Transmit(csx->hwt101_uart,cmd,sizeof(cmd),HWT101_UART_MAX_WAIT_TIME);
